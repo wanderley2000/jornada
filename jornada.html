@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi jornada en minutos</title>
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f3f5f1;--surface:#ffffff;--ink:#1c2420;--muted:#5d6b63;--line:#d6ddd7;--accent:#1f6f54;--accent-ink:#ffffff;--bar:#1f6f54;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#141a17;--surface:#1c2420;--ink:#e8eee9;--muted:#9aa9a0;--line:#2f3b34;--accent:#5fc9a0;--accent-ink:#10231b;--bar:#5fc9a0;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#141a17;--surface:#1c2420;--ink:#e8eee9;--muted:#9aa9a0;--line:#2f3b34;--accent:#5fc9a0;--accent-ink:#10231b;--bar:#5fc9a0;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Source Serif 4",Georgia,"Times New Roman",serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+h1{font:700 2rem/1.15 "Source Serif 4",Georgia,serif;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 24px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+h2{font:600 1.1rem/1.2 "Source Serif 4",Georgia,serif;margin:0 0 12px}
+label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>div{flex:1 1 140px}
+.add{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.add .n{flex:3 1 200px}.add .m{flex:1 1 110px}
+button{font:600 .95rem inherit;font-family:inherit;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:9px 14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button.x{padding:4px 10px;border-color:var(--line);color:var(--muted);background:transparent}
+li.act.editing{flex-wrap:wrap}
+li.act input.en{flex:1 1 180px}
+li.act input.em{flex:0 0 110px;width:110px}
+ul{list-style:none;margin:12px 0 0;padding:0}
+li.act{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+li.act span.t{flex:1;overflow-wrap:anywhere}
+li.act span.f{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.hint{color:var(--muted);font-size:.9rem;margin:8px 0 0}
+.status{font-size:.95rem;margin:12px 0 0}
+.status.bad{color:#b3261e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .status.bad{color:#ff8a80}}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tl{display:flex;height:36px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin:4px 0 14px}
+.tl i{display:block;height:100%;border-right:2px solid var(--surface)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+th,td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:.9rem;border-top:0}
+td.name{white-space:normal;overflow-wrap:anywhere}
+td.num,th.num{text-align:right}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+tfoot td{font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<h1>Mi jornada en minutos</h1>
+<p class="sub">Anota tus actividades y la app reparte el tiempo de tu jornada de forma aleatoria. Todo se mide en minutos.</p>
+
+<section>
+  <h2>Jornada</h2>
+  <div class="row">
+    <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+    <div><label for="inicio">Hora de inicio</label><input id="inicio" type="time" value="08:00"></div>
+    <div><label for="total">Duración (minutos)</label><input id="total" type="number" min="1" value="480" inputmode="numeric"></div>
+  </div>
+  <p class="hint">480 minutos equivalen a 8 horas.</p>
+</section>
+
+<section>
+  <h2>Actividades del día</h2>
+  <div class="add">
+    <input class="n" id="nombre" placeholder="Ej.: Reunión con el equipo" aria-label="Nombre de la actividad">
+    <input class="m" id="fijos" type="number" min="1" placeholder="Min. fijos" inputmode="numeric" aria-label="Minutos fijos (opcional)">
+    <button id="agregar">Agregar actividad</button>
+  </div>
+  <p class="hint">Deja «Min. fijos» vacío para que el tiempo se asigne al azar. Si lo llenas, esa actividad dura exactamente esos minutos.</p>
+  <ul id="lista"></ul>
+  <p class="status" id="estado" role="status"></p>
+  <div class="actions">
+    <button id="repartir">Repartir al azar</button>
+    <button class="ghost" id="limpiar">Borrar todo</button>
+  </div>
+</section>
+
+<section id="resultado" hidden>
+  <h2>Distribución de la jornada</h2>
+  <div class="tl" id="tl" aria-hidden="true"></div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Horario</th><th>Actividad</th><th class="num">Minutos</th></tr></thead>
+      <tbody id="filas"></tbody>
+      <tfoot><tr><td></td><td>Total</td><td class="num" id="suma"></td></tr></tfoot>
+    </table>
+  </div>
+  <div class="actions"><button class="ghost" id="copiar">Copiar resumen</button></div>
+  <p class="status" id="copiado" role="status"></p>
+</section>
+</main>
+
+<script>
+(function(){
+  var KEY="jornada-v1";
+  var COLORS=["#1f6f54","#c4662a","#3b6ea5","#9b4f96","#b8962e","#3a8c8c","#a8453f","#5b6b2f","#6f5aa8","#2f7d9b"];
+  var state={fecha:"",inicio:"08:00",total:480,acts:[],result:null};
+  var $=function(id){return document.getElementById(id)};
+  var editando=null;
+
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+  function load(){try{var s=localStorage.getItem(KEY);if(s){var o=JSON.parse(s);if(o&&Array.isArray(o.acts))state=o}}catch(e){}}
+
+  function hoy(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+  function hhmm(min){min=((min%1440)+1440)%1440;return String(Math.floor(min/60)).padStart(2,"0")+":"+String(min%60).padStart(2,"0")}
+  function toMin(t){var p=(t||"08:00").split(":");return (+p[0])*60+(+p[1]||0)}
+
+  function validar(){
+    var total=Math.floor(+state.total)||0;
+    var fijos=0,libres=0;
+    state.acts.forEach(function(a){if(a.min){fijos+=a.min}else libres++});
+    var rest=total-fijos;
+    if(!state.acts.length)return {ok:false,msg:"Agrega al menos una actividad."};
+    if(total<1)return {ok:false,msg:"La duración debe ser de al menos 1 minuto."};
+    if(rest<0)return {ok:false,msg:"Los minutos fijos ("+fijos+") superan la jornada ("+total+"). Reduce "+(-rest)+" min."};
+    if(libres===0&&rest>0)return {ok:false,msg:"Faltan "+rest+" min por asignar. Deja al menos una actividad sin minutos fijos o ajusta los valores."};
+    if(libres>rest)return {ok:false,msg:"No alcanzan los minutos: quedan "+rest+" para "+libres+" actividades sin tiempo fijo."};
+    return {ok:true,total:total,fijos:fijos,libres:libres,rest:rest,msg:"Fijos: "+fijos+" min · Por repartir: "+rest+" min entre "+libres+" actividad"+(libres===1?"":"es")+"."};
+  }
+
+  // Reparte "rest" minutos enteros entre n actividades, mínimo 1 cada una, con pesos aleatorios
+  function repartir(rest,n){
+    var out=[],i;
+    for(i=0;i<n;i++)out.push(1);
+    var extra=rest-n;
+    if(extra>0){
+      var w=[],s=0;
+      for(i=0;i<n;i++){var r=Math.random()+0.15;w.push(r);s+=r}
+      var asignado=0;
+      for(i=0;i<n;i++){var v=Math.floor(extra*w[i]/s);out[i]+=v;asignado+=v}
+      var sobra=extra-asignado;
+      while(sobra>0){out[Math.floor(Math.random()*n)]++;sobra--}
+    }
+    return out;
+  }
+
+  function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+  function generar(){
+    var v=validar();
+    if(!v.ok)return;
+    var libres=state.acts.filter(function(a){return !a.min});
+    var mins=repartir(v.rest,libres.length);
+    var map={};
+    libres.forEach(function(a,i){map[a.id]=mins[i]});
+    var items=state.acts.map(function(a,i){return {nombre:a.nombre,min:a.min||map[a.id],color:COLORS[i%COLORS.length]}});
+    shuffle(items);
+    state.result=items;
+    save();render();
+  }
+
+  function renderLista(){
+    var ul=$("lista");ul.innerHTML="";
+    state.acts.forEach(function(a,i){
+      var li=document.createElement("li");li.className="act";
+      var dot=document.createElement("span");dot.className="dot";dot.style.background=COLORS[i%COLORS.length];
+      if(editando===a.id){
+        li.className="act editing";
+        var en=document.createElement("input");en.className="en";en.value=a.nombre;en.setAttribute("aria-label","Descripción de la actividad");
+        var em=document.createElement("input");em.className="em";em.type="number";em.min="1";em.value=a.min||"";em.placeholder="al azar";em.setAttribute("aria-label","Minutos fijos");
+        var gs=document.createElement("button");gs.textContent="Guardar";
+        var cn=document.createElement("button");cn.className="x";cn.textContent="Cancelar";
+        var guardar=function(){var n=en.value.trim();if(!n){en.focus();return}var m=Math.floor(+em.value)||0;a.nombre=n;a.min=m>0?m:0;editando=null;state.result=null;save();render()};
+        gs.onclick=guardar;
+        cn.onclick=function(){editando=null;render()};
+        [en,em].forEach(function(inp){inp.addEventListener("keydown",function(e){if(e.key==="Enter")guardar();if(e.key==="Escape"){editando=null;render()}})});
+        li.appendChild(dot);li.appendChild(en);li.appendChild(em);li.appendChild(gs);li.appendChild(cn);ul.appendChild(li);
+        setTimeout(function(){en.focus()},0);
+        return;
+      }
+      var t=document.createElement("span");t.className="t";t.textContent=a.nombre;
+      var f=document.createElement("span");f.className="f";f.textContent=a.min?a.min+" min fijos":"al azar";
+      var ed=document.createElement("button");ed.className="x";ed.textContent="Editar";ed.setAttribute("aria-label","Editar "+a.nombre);
+      ed.onclick=function(){editando=a.id;render()};
+      var b=document.createElement("button");b.className="x";b.textContent="Quitar";b.setAttribute("aria-label","Quitar "+a.nombre);
+      b.onclick=function(){state.acts.splice(i,1);state.result=null;save();render()};
+      li.appendChild(dot);li.appendChild(t);li.appendChild(f);li.appendChild(ed);li.appendChild(b);ul.appendChild(li);
+    });
+    var v=validar(),e=$("estado");
+    if(!state.acts.length){e.textContent="Aún no hay actividades. Agrega la primera arriba.";e.className="status"}
+    else{e.textContent=v.msg;e.className="status"+(v.ok?"":" bad")}
+    $("repartir").disabled=!v.ok;
+    $("repartir").style.opacity=v.ok?1:.5;
+  }
+
+  function renderResultado(){
+    var sec=$("resultado");
+    if(!state.result){sec.hidden=true;return}
+    sec.hidden=false;
+    var total=state.result.reduce(function(s,x){return s+x.min},0);
+    var tl=$("tl");tl.innerHTML="";
+    var filas=$("filas");filas.innerHTML="";
+    var t=toMin(state.inicio);
+    state.result.forEach(function(x){
+      var seg=document.createElement("i");seg.style.width=(x.min/total*100)+"%";seg.style.background=x.color;seg.title=x.nombre+": "+x.min+" min";tl.appendChild(seg);
+      var tr=document.createElement("tr");
+      var c1=document.createElement("td");c1.textContent=hhmm(t)+" – "+hhmm(t+x.min);
+      var c2=document.createElement("td");c2.className="name";
+      var d=document.createElement("span");d.className="dot";d.style.background=x.color;
+      c2.appendChild(d);c2.appendChild(document.createTextNode(x.nombre));
+      var c3=document.createElement("td");c3.className="num";c3.textContent=x.min+" min";
+      tr.appendChild(c1);tr.appendChild(c2);tr.appendChild(c3);filas.appendChild(tr);
+      t+=x.min;
+    });
+    $("suma").textContent=total+" min";
+  }
+
+  function render(){
+    $("fecha").value=state.fecha||hoy();
+    $("inicio").value=state.inicio;
+    $("total").value=state.total;
+    renderLista();renderResultado();
+  }
+
+  function agregar(){
+    var n=$("nombre").value.trim();
+    if(!n){$("nombre").focus();return}
+    var m=Math.floor(+$("fijos").value)||0;
+    state.acts.push({id:Date.now()+Math.random(),nombre:n,min:m>0?m:0});
+    $("nombre").value="";$("fijos").value="";
+    state.result=null;save();render();$("nombre").focus();
+  }
+
+  $("agregar").onclick=agregar;
+  $("nombre").addEventListener("keydown",function(e){if(e.key==="Enter")agregar()});
+  $("fijos").addEventListener("keydown",function(e){if(e.key==="Enter")agregar()});
+  $("repartir").onclick=generar;
+  $("limpiar").onclick=function(){state.acts=[];state.result=null;save();render()};
+  $("fecha").onchange=function(){state.fecha=this.value;save()};
+  $("inicio").onchange=function(){state.inicio=this.value||"08:00";save();renderResultado()};
+  $("total").oninput=function(){state.total=Math.floor(+this.value)||0;state.result=null;save();renderLista();renderResultado()};
+  $("copiar").onclick=function(){
+    if(!state.result)return;
+    var t=toMin(state.inicio),lines=["Jornada del "+(state.fecha||hoy())];
+    state.result.forEach(function(x){lines.push(hhmm(t)+" – "+hhmm(t+x.min)+"  "+x.nombre+" ("+x.min+" min)");t+=x.min});
+    lines.push("Total: "+state.result.reduce(function(s,x){return s+x.min},0)+" min");
+    var txt=lines.join("\n"),msg=$("copiado");
+    function ok(){msg.textContent="Resumen copiado."}
+    function fail(){msg.textContent="No se pudo copiar. Selecciona la tabla y cópiala manualmente."}
+    try{navigator.clipboard.writeText(txt).then(ok,fail)}catch(e){fail()}
+  };
+
+  load();
+  if(!state.fecha)state.fecha=hoy();
+  render();
+})();
+</script>
+</body>
+</html>
